@@ -7,6 +7,7 @@ import '../services/plan_progress.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import 'add_workout.dart';
 import 'shell.dart';
 import 'workout_detail_screen.dart';
 
@@ -104,9 +105,32 @@ class HomeScreen extends StatelessWidget {
 
           SectionTitle('Últimos treinos'),
           if (s.workouts.isEmpty)
-            Text(
-              s.healthState == HealthState.ready ? 'Nenhum treino nos últimos 180 dias.' : 'Conecte o Health Connect para ver seus treinos.',
-              style: t.bodyMedium?.copyWith(color: c.onSurfaceVariant),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Traga seus treinos', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Conecte o app do seu relógio (Zepp, Garmin, Strava...) ao Health Connect ou importe um arquivo '
+                    'GPX/TCX/FIT. Com seu histórico, o plano fica sob medida.',
+                    style: t.bodyMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    FilledButton.tonalIcon(
+                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectGuideScreen())),
+                      icon: const Icon(Icons.watch),
+                      label: const Text('Conectar relógio'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => pickAndImport(context),
+                      icon: const Icon(Icons.upload_file),
+                      label: const Text('Importar arquivo'),
+                    ),
+                  ]),
+                ]),
+              ),
             ),
           for (final w in s.workouts.take(3))
             Padding(

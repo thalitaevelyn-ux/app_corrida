@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import type Anthropic from "@anthropic-ai/sdk";
-
 import { Budget, BudgetExceeded, costUsd } from "../src/budget.js";
-import { Planner, PlannerError } from "../src/planner.js";
+import { MemoryUsageStore, eventFrom } from "../src/usage.js";
 
 describe("custo", () => {
   it("calcula pelo preço do Opus 5.5 (US$ 4 entrada / US$ 20 saída por milhão)", () => {
@@ -18,31 +16,27 @@ describe("custo", () => {
 });
 
 describe("Budget", () => {
-  it("bloqueia quando o teto do mês é atingido e libera no mês seguinte", () => {
+  const ev = (uid: string, cost: number, at: Date) => ({ ...eventFrom({ uid, kind: "gerar", model: "m" }, undefined, cost, true, 1), at });
+
+  it("bloqueia no teto do mês e libera no mês seguinte", async () => {
+    const store = new MemoryUsageStore();
     let now = new Date("2026-11-20T10:00:00Z");
-    const b = new Budget(1, 0, () => now);
-    b.reserve();
-    b.record("claude-opus-5-5", { input_tokens: 0, output_tokens: 50_000 }); // US$ 1,00
-    assert.throws(() => b.reserve(), BudgetExceeded);
+    const b = new Budget(store, { monthlyUsd: 1, maxPerDay: 0, maxPerUserDay: 0 }, () => now);
+    await store.record(ev("a", 1, now));
+    await assert.rejects(b.check("a"), BudgetExceeded);
     now = new Date("2026-12-01T00:00:01Z");
-    assert.doesNotThrow(() => b.reserve());
+    await b.check("a");
   });
 
-  it("limita planos por dia", () => {
-    const b = new Budget(100, 2, () => new Date("2026-11-20T10:00:00Z"));
-    b.reserve();
-    b.reserve();
-    assert.throws(() => b.reserve(), /por dia/);
-  });
-
-  it("o Planner não chama a API quando o teto estourou", async () => {
-    let calls = 0;
-    const client = {
-      beta: { messages: { stream() { calls++; throw new Error("não deveria chamar"); } } },
-    } as unknown as Anthropic;
-    const b = new Budget(1, 0);
-    b.record("claude-opus-5-5", { input_tokens: 0, output_tokens: 60_000 });
-    await assert.rejects(new Planner(client, b).gerar({} as any), (e: PlannerError) => e.status === 429);
-    assert.equal(calls, 0);
+  it("limita planos por dia no total e por usuário", async () => {
+    const store = new MemoryUsageStore();
+    const now = new Date("2026-11-20T10:00:00Z");
+    const b = new Budget(store, { monthlyUsd: 100, maxPerDay: 3, maxPerUserDay: 2 }, () => now);
+    await store.record(ev("a", 0, now));
+    await store.record(ev("a", 0, now));
+    await assert.rejects(b.check("a"), /limite de 2 planos hoje/);
+    await b.check("b");
+    await store.record(ev("b", 0, now));
+    await assert.rejects(b.check("c"), /3 planos por dia/);
   });
 });

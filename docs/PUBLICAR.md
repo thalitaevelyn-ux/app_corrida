@@ -4,6 +4,8 @@ Os passos que podem gerar cobrança estão marcados com **[CUSTO]**. Nenhum dele
 você confirmar no site do serviço. Se algum passo pedir cartão ou pagamento sem estar marcado aqui, pare e pergunte
 antes de continuar.
 
+Antes de tudo, configure o Firebase (contas, nuvem e painel): [docs/FIREBASE.md](FIREBASE.md). É grátis.
+
 | Etapa | Custo |
 |---|---|
 | 1. Chave da Claude API | **[CUSTO]** por uso. Você define o limite máximo antes de colocar crédito. |
@@ -67,16 +69,16 @@ cerca de 1 minuto para acordar. O app espera até 4 minutos, então funciona, s�
 
 ## 3. Build do app
 
-Para testar no celular com a IA ligada:
+A configuração do app (Firebase, URL do servidor) fica em `config/app.json`. Para testar no celular:
 
 ```bash
-flutter run --dart-define=PLAN_API_URL=https://SUA-URL --dart-define=PLAN_API_TOKEN=SEU_APP_TOKEN
+flutter run --dart-define-from-file=config/app.json
 ```
 
-O build para a Play Store usa os mesmos parâmetros e exige o passo 4 antes:
+O build para a Play Store usa o mesmo arquivo e exige o passo 4 antes:
 
 ```bash
-flutter build appbundle --release --dart-define=PLAN_API_URL=https://SUA-URL --dart-define=PLAN_API_TOKEN=SEU_APP_TOKEN
+flutter build appbundle --release --dart-define-from-file=config/app.json
 ```
 
 O arquivo gerado fica em `build/app/outputs/bundle/release/app-release.aab`.

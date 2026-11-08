@@ -4,8 +4,10 @@ import 'package:http/http.dart' as http;
 
 import '../models/plan.dart';
 
-/// Configuração do backend de IA, passada no build:
-///   flutter run --dart-define=PLAN_API_URL=https://seu-backend --dart-define=PLAN_API_TOKEN=...
+/// Configuração do backend de IA (config/app.json):
+///   PLAN_API_URL   endereço do servidor
+///   PLAN_API_TOKEN só para o modo sem login (sem Firebase); com login, o app
+///                  envia o token do usuário do Firebase.
 class PlanApiConfig {
   static const url = String.fromEnvironment('PLAN_API_URL');
   static const token = String.fromEnvironment('PLAN_API_TOKEN');
@@ -36,8 +38,16 @@ class PlanApiResult {
 }
 
 class PlanApi {
-  PlanApi({http.Client? client}) : _client = client ?? http.Client();
+  PlanApi({http.Client? client, this.idToken}) : _client = client ?? http.Client();
   final http.Client _client;
+
+  /// Token do usuário logado (Firebase). Sem ele, usa PLAN_API_TOKEN.
+  final Future<String?> Function()? idToken;
+
+  /// Exclui a conta e todos os dados do usuário no servidor (exigência da Play Store).
+  Future<void> deleteAccount() async {
+    await _send('DELETE', '/v1/conta', null);
+  }
 
   Future<PlanApiResult> generate({
     required Map<String, dynamic> goal,
@@ -72,20 +82,21 @@ class PlanApi {
     return _parse(body);
   }
 
-  Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> payload) async {
+  Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> payload) => _send('POST', path, payload);
+
+  Future<Map<String, dynamic>> _send(String method, String path, Map<String, dynamic>? payload) async {
+    final user = await idToken?.call();
+    final bearer = (user != null && user.isNotEmpty) ? user : PlanApiConfig.token;
     final http.Response res;
     try {
-      res = await _client
-          .post(
-            Uri.parse('${PlanApiConfig.url}$path'),
-            headers: {
-              'content-type': 'application/json',
-              if (PlanApiConfig.token.isNotEmpty) 'authorization': 'Bearer ${PlanApiConfig.token}',
-            },
-            body: jsonEncode(payload),
-          )
-          // A IA pode levar alguns minutos num plano longo.
-          .timeout(const Duration(minutes: 4));
+      final req = http.Request(method, Uri.parse('${PlanApiConfig.url}$path'))
+        ..headers.addAll({
+          'content-type': 'application/json',
+          if (bearer.isNotEmpty) 'authorization': 'Bearer $bearer',
+        });
+      if (payload != null) req.body = jsonEncode(payload);
+      // A IA pode levar alguns minutos num plano longo (e o servidor gratuito acorda devagar).
+      res = await http.Response.fromStream(await _client.send(req).timeout(const Duration(minutes: 4)));
     } catch (e) {
       throw PlanApiException('Sem conexão com o servidor do plano ($e).');
     }
@@ -96,6 +107,7 @@ class PlanApi {
       } catch (_) {}
       throw PlanApiException(msg);
     }
+    if (res.bodyBytes.isEmpty) return const {};
     return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
   }
 

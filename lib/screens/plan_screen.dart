@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../config.dart';
+import '../services/auth_service.dart';
 import '../services/plan_api.dart';
 import '../services/plan_progress.dart';
 import '../state/app_state.dart';
@@ -203,24 +205,75 @@ class _StatusTag extends StatelessWidget {
 }
 
 
-/// URL da política de privacidade (a mesma de android/.../strings.xml).
-const privacyPolicyUrl = String.fromEnvironment('PRIVACY_URL', defaultValue: 'https://fast-run-plano.onrender.com/privacidade');
+const privacyPolicyUrl = AppConfig.privacyUrl;
+
+/// AuthService só existe quando o build tem Firebase (com login).
+AuthService? _authOf(BuildContext context) {
+  try {
+    return Provider.of<AuthService>(context, listen: false);
+  } catch (_) {
+    return null;
+  }
+}
 
 class _AboutDialog extends StatelessWidget {
   const _AboutDialog({required this.state});
   final AppState state;
 
+  Future<void> _confirmDeleteAccount(BuildContext context, AuthService auth) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir sua conta?'),
+        content: const Text(
+          'Isso apaga para sempre sua conta, seu objetivo, seu plano e os treinos importados, aqui e na nuvem. '
+          'Os treinos no Health Connect continuam lá (gerencie-os pelo próprio Health Connect).',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop();
+    try {
+      await state.deleteAccount();
+      await auth.signOut();
+      messenger.showSnackBar(const SnackBar(content: Text('Conta excluída.')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Não foi possível excluir agora ($e). Tente de novo ou peça em ${AppConfig.deleteAccountUrl}'),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final auth = _authOf(context);
+    final email = auth?.user?.email;
     return AlertDialog(
       title: const Text('Sobre e privacidade'),
       content: SingleChildScrollView(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          const Text(
-            'Seus treinos são lidos do Health Connect e ficam só neste aparelho. '
-            'Com a IA ativa, apenas um resumo (objetivo, idade, peso e médias dos treinos) é enviado para gerar o plano. '
-            'Localização e rotas nunca saem do aparelho.',
+          if (email != null) ...[
+            Text('Conta', style: t.labelLarge),
+            Text(email),
+            const SizedBox(height: 12),
+          ],
+          Text(
+            auth == null
+                ? 'Seus treinos são lidos do Health Connect e ficam só neste aparelho. '
+                    'Com a IA ativa, apenas um resumo (objetivo, idade, peso e médias dos treinos) é enviado para gerar o plano.'
+                : 'Os treinos do Health Connect ficam só neste aparelho. Objetivo, plano e treinos importados ficam na sua '
+                    'conta, para você não perder nada ao trocar de celular. Com a IA ativa, apenas um resumo dos treinos '
+                    '(sem localização) é enviado para gerar o plano.',
           ),
           const SizedBox(height: 12),
           Text('Política completa:', style: t.labelLarge),
@@ -233,29 +286,42 @@ class _AboutDialog extends StatelessWidget {
         ]),
       ),
       actions: [
-        TextButton(
-          onPressed: () async {
-            final ok = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Apagar meus dados?'),
-                content: const Text(
-                  'Apaga objetivo, plano e detalhes das corridas guardados no app. '
-                  'Os treinos no Health Connect não são apagados (gerencie-os pelo próprio Health Connect).',
+        if (auth != null) ...[
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await auth.signOut();
+            },
+            child: const Text('Sair'),
+          ),
+          TextButton(
+            onPressed: () => _confirmDeleteAccount(context, auth),
+            child: Text('Excluir conta', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          ),
+        ] else
+          TextButton(
+            onPressed: () async {
+              final ok = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Apagar meus dados?'),
+                  content: const Text(
+                    'Apaga objetivo, plano e treinos importados guardados no app. '
+                    'Os treinos no Health Connect não são apagados (gerencie-os pelo próprio Health Connect).',
+                  ),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                    FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Apagar')),
+                  ],
                 ),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                  FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Apagar')),
-                ],
-              ),
-            );
-            if (ok == true) {
-              if (context.mounted) Navigator.of(context).pop();
-              await state.resetAll();
-            }
-          },
-          child: const Text('Apagar meus dados'),
-        ),
+              );
+              if (ok == true) {
+                if (context.mounted) Navigator.of(context).pop();
+                await state.resetAll();
+              }
+            },
+            child: const Text('Apagar meus dados'),
+          ),
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Fechar')),
       ],
     );

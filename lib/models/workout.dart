@@ -60,6 +60,7 @@ class Workout {
     this.hr = const [],
     this.splits = const [],
     this.route = const [],
+    this.imported = false,
   });
 
   final String id;
@@ -78,6 +79,9 @@ class Workout {
   List<HrSample> hr;
   List<Split> splits;
   List<RoutePoint> route;
+
+  /// true = veio de arquivo (GPX/TCX/FIT) e é guardado pelo app; false = Health Connect.
+  final bool imported;
 
   Duration get duration => end.difference(start);
 
@@ -111,4 +115,68 @@ class Workout {
           'paceSegKm': paceSecPerKm!.round(),
         if (avgHr != null) 'fcMedia': avgHr!.round(),
       };
+
+  /// Mesmo treino visto por duas fontes (ex.: importado e já no Health Connect):
+  /// mesmo tipo e início com até 3 min de diferença, ou mais de 80% de sobreposição.
+  bool sameSessionAs(Workout o) {
+    if (o.kind != kind) return false;
+    if (start.difference(o.start).inSeconds.abs() <= 180) return true;
+    final a = start.isAfter(o.start) ? start : o.start;
+    final b = end.isBefore(o.end) ? end : o.end;
+    if (!b.isAfter(a)) return false;
+    final shorter = duration < o.duration ? duration : o.duration;
+    return shorter.inSeconds > 0 && b.difference(a).inSeconds / shorter.inSeconds > 0.8;
+  }
+
+  /// Serialização completa (treinos importados ficam no aparelho e na nuvem).
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'kind': kind.name,
+        'title': title,
+        'start': start.toIso8601String(),
+        'end': end.toIso8601String(),
+        'source': source,
+        'distanceM': distanceM,
+        'kcal': kcal,
+        'steps': steps,
+        'hr': [for (final h in hr) [h.time.millisecondsSinceEpoch, h.bpm]],
+        'splits': splits.map((e) => e.toJson()).toList(),
+        'route': route.map((e) => e.toJson()).toList(),
+        'imported': imported,
+      };
+
+  factory Workout.fromJson(Map<String, dynamic> j) => Workout(
+        id: j['id'] as String,
+        kind: WorkoutKind.fromName(j['kind'] as String),
+        title: j['title'] as String,
+        start: DateTime.parse(j['start'] as String),
+        end: DateTime.parse(j['end'] as String),
+        source: j['source'] as String,
+        distanceM: (j['distanceM'] as num?)?.toDouble(),
+        kcal: (j['kcal'] as num?)?.toInt(),
+        steps: (j['steps'] as num?)?.toInt(),
+        hr: [
+          for (final h in (j['hr'] as List? ?? const []))
+            HrSample(DateTime.fromMillisecondsSinceEpoch((h as List)[0] as int), (h[1] as num).toDouble()),
+        ],
+        splits: [for (final s in (j['splits'] as List? ?? const [])) Split.fromJson(Map<String, dynamic>.from(s as Map))],
+        route: [for (final r in (j['route'] as List? ?? const [])) RoutePoint.fromJson(r as List)],
+        imported: j['imported'] as bool? ?? false,
+      );
+
+  Workout copyAsImported({String? source}) => Workout(
+        id: id,
+        kind: kind,
+        title: title,
+        start: start,
+        end: end,
+        source: source ?? this.source,
+        distanceM: distanceM,
+        kcal: kcal,
+        steps: steps,
+        hr: hr,
+        splits: splits,
+        route: route,
+        imported: true,
+      );
 }

@@ -12,3 +12,9 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Exceção: chave de TESTE (pública de propósito, ver android/test-keys/README.md)
+!test-keys/fast-run-teste.jks
+
+# Saídas do Gradle
+/build/

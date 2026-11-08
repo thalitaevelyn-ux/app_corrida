@@ -35,6 +35,13 @@ android {
     }
 
     signingConfigs {
+        // Chave fixa de TESTE (no repositório; ver android/test-keys/README.md).
+        create("teste") {
+            storeFile = rootProject.file("test-keys/fast-run-teste.jks")
+            storePassword = "fastrun-teste"
+            keyAlias = "teste"
+            keyPassword = "fastrun-teste"
+        }
         if (hasReleaseKey) {
             create("release") {
                 storeFile = file(keyProps.getProperty("storeFile"))
@@ -46,10 +53,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("teste")
+        }
         release {
-            // Sem key.properties, assina com a chave de debug (serve para testar,
-            // mas a Play Store recusa).
-            signingConfig = if (hasReleaseKey) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
+            // Sem key.properties, assina com a chave de TESTE (serve para instalar
+            // direto no celular; a Play Store exige a chave de publicação).
+            signingConfig = if (hasReleaseKey) signingConfigs.getByName("release") else signingConfigs.getByName("teste")
             isMinifyEnabled = true
             isShrinkResources = true
         }

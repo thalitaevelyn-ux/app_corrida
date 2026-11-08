@@ -101,6 +101,8 @@ class HealthService {
     int? kcal,
     required String title,
     List<WorkoutRouteLocation> route = const [],
+    WorkoutKind kind = WorkoutKind.corrida,
+    RecordingMethod recordingMethod = RecordingMethod.active,
   }) async {
     await _ensureConfigured();
     String? builder;
@@ -114,13 +116,13 @@ class HealthService {
       }
     }
     final id = await _health.writeWorkoutDataUUID(
-      activityType: HealthWorkoutActivityType.RUNNING,
+      activityType: activityFor(kind),
       start: start,
       end: end,
-      totalDistance: distanceM.round(),
+      totalDistance: distanceM > 0 ? distanceM.round() : null,
       totalEnergyBurned: kcal,
       title: title,
-      recordingMethod: RecordingMethod.active,
+      recordingMethod: recordingMethod,
     );
     if (builder != null) {
       try {
@@ -135,6 +137,14 @@ class HealthService {
     }
     return id == 'null' ? null : id;
   }
+
+  static HealthWorkoutActivityType activityFor(WorkoutKind k) => switch (k) {
+        WorkoutKind.corrida => HealthWorkoutActivityType.RUNNING,
+        WorkoutKind.caminhada => HealthWorkoutActivityType.WALKING,
+        WorkoutKind.bike => HealthWorkoutActivityType.BIKING,
+        WorkoutKind.academia => HealthWorkoutActivityType.STRENGTH_TRAINING,
+        WorkoutKind.outro => HealthWorkoutActivityType.OTHER,
+      };
 
   static WorkoutKind kindFromActivity(HealthWorkoutActivityType t) {
     final n = t.name;

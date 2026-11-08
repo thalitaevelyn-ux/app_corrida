@@ -17,7 +17,17 @@ services:
       # Preenchidos no painel do Render (sync: false = não ficam neste arquivo).
       - key: ANTHROPIC_API_KEY
         sync: false
-      # Mesmo valor embutido no APK (--dart-define=PLAN_API_TOKEN).
+      # Conta de serviço do Firebase (JSON inteiro, numa linha). Liga contas,
+      # registro de uso e o painel /admin. Sem ela: modo legado com APP_TOKEN.
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      # Config web do Firebase (pública), para o login do painel /admin.
+      - key: FIREBASE_WEB_CONFIG
+        sync: false
+      # E-mails (separados por vírgula) com acesso ao painel /admin.
+      - key: ADMIN_EMAILS
+        sync: false
+      # Só para o APK antigo (1.0.0), enquanto o Firebase não estiver configurado.
       - key: APP_TOKEN
         sync: false
       # E-mail de contato mostrado na política de privacidade (/privacidade).
@@ -30,3 +40,6 @@ services:
         value: "20"
       - key: MAX_PER_DAY
         value: "60"
+      # Planos (gerar + ajustar) por usuário por dia.
+      - key: MAX_PER_USER_DAY
+        value: "5"

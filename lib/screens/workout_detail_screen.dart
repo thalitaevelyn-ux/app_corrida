@@ -46,7 +46,30 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: Text(w.kind.label)),
+      appBar: AppBar(title: Text(w.kind.label), actions: [
+        if (w.imported)
+          IconButton(
+            tooltip: 'Excluir treino importado',
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () async {
+              final ok = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Excluir este treino?'),
+                  content: const Text('Ele sai do Fast run e da sua conta. Se você também salvou no Health Connect, apague lá separadamente.'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                    FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Excluir')),
+                  ],
+                ),
+              );
+              if (ok == true && context.mounted) {
+                await context.read<AppState>().deleteImported(w.id);
+                if (context.mounted) Navigator.of(context).pop();
+              }
+            },
+          ),
+      ]),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
         children: [

@@ -14,7 +14,10 @@ o que você fez e grava corridas com **GPS**, salvando no Health Connect.
 | Detalhe | Distância, duração, pace/velocidade, FC média e máxima, calorias, passos, zonas de FC, parciais e rota (corridas gravadas no app), comparação com o treino planejado |
 | Estatísticas | Semanas ou meses: km, treinos, pace médio, tempo ativo, gráfico de volume, divisão por tipo, recordes |
 | Plano | Semanas do plano, ritmos de treino, status de cada sessão, "como está se sentindo", gerar de novo |
+| Entrar | Login com Google ou e-mail e senha (Firebase), aceite da política, excluir conta |
+| Adicionar treino | Importar GPX/TCX/FIT (ou "Compartilhar → Fast run" de outro app), guia para conectar Zepp/Garmin/Strava ao Health Connect, ou gravar com GPS |
 | Gravar | GPS em serviço de primeiro plano (funciona com a tela apagada), pace atual e médio, parciais por km, pausa; salva corrida e rota no Health Connect |
+| Painel `/admin` | Para a administradora: usuários, ativos, planos gerados, gasto de tokens por dia e por usuário, erros, fontes de dados |
 
 ## Como o plano é gerado
 
@@ -40,10 +43,10 @@ flutter pub get
 flutter run
 ```
 
-Com o backend de IA:
+Com login, nuvem e IA (valores em `config/app.json`; veja [docs/FIREBASE.md](docs/FIREBASE.md)):
 
 ```bash
-flutter run --dart-define=PLAN_API_URL=https://SEU-SERVIDOR --dart-define=PLAN_API_TOKEN=SEU_APP_TOKEN
+flutter run --dart-define-from-file=config/app.json
 ```
 
 No primeiro uso, toque em **Conectar** para liberar o Health Connect. O app pede leitura de treinos e FC, escrita de
@@ -64,7 +67,8 @@ Veja [backend/README.md](backend/README.md). Deploy no Render (plano free) pelo 
 ```
 lib/
   models/      workout, goal, plan (JSON igual ao do backend)
-  services/    health_service (Health Connect), run_recorder (GPS), fitness (nível),
+  services/    auth_service + firestore_repo (contas e nuvem), importers (GPX/TCX/FIT),
+               health_service (Health Connect), run_recorder (GPS), fitness (nível),
                local_planner (plano por regras), plan_progress (aderência + ajuste),
                plan_api (backend de IA), stats, storage_service
   state/       app_state (ChangeNotifier com Provider)

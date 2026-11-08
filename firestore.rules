@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// Regras do Fast run. Cole em Firebase → Firestore → Regras → Publicar.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Perfil, objetivo e plano: só o próprio usuário.
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        // Campos de controle só o servidor muda.
+        && !request.resource.data.diff(resource == null ? {} : resource.data).affectedKeys()
+             .hasAny(['role', 'blocked', 'usage']);
+      allow delete: if false; // exclusão é feita pelo servidor (DELETE /v1/conta)
+
+      // Treinos importados de arquivo (até ~1 MB cada documento).
+      match /workouts/{id} {
+        allow read, delete: if request.auth != null && request.auth.uid == uid;
+        allow create, update: if request.auth != null && request.auth.uid == uid
+          && request.resource.data.data is string
+          && request.resource.data.data.size() < 900000;
+      }
+    }
+
+    // Registros de uso e custo: só o servidor (Admin SDK ignora estas regras).
+    match /usage_events/{id} { allow read, write: if false; }
+    match /usage_daily/{id} { allow read, write: if false; }
+    match /usage_monthly/{id} { allow read, write: if false; }
+  }
+}

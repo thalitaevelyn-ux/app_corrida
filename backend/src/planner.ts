@@ -1,9 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 
-import { Budget, BudgetExceeded } from "./budget.js";
+import { type Budget, BudgetExceeded, costUsd } from "./budget.js";
 import { ajustarMessage, gerarMessage, SYSTEM_PROMPT } from "./prompts.js";
 import { type AjustarRequest, type GerarRequest, type Plano, PlanoSchema, sanitizePlan } from "./schema.js";
+import { eventFrom, type UsageStore } from "./usage.js";
 
 export const MODEL = process.env.CLAUDE_MODEL ?? "claude-opus-5-5";
 
@@ -17,27 +18,47 @@ export class PlannerError extends Error {
   }
 }
 
+/** Quem pediu o plano (para limites por usuário e o dashboard). */
+export interface PlanContext {
+  uid: string;
+  email?: string;
+}
+
 export class Planner {
   constructor(
     private readonly client: Anthropic = new Anthropic(),
     private readonly budget?: Budget,
+    private readonly usage?: UsageStore,
   ) {}
 
-  gerar(req: GerarRequest): Promise<Plano> {
-    return this.run(gerarMessage(req), 1);
+  gerar(req: GerarRequest, ctx: PlanContext = { uid: "local" }): Promise<Plano> {
+    return this.run(gerarMessage(req), 1, ctx, "gerar");
   }
 
-  async ajustar(req: AjustarRequest): Promise<Plano> {
-    return this.run(ajustarMessage(req), req.semanaAtual);
+  ajustar(req: AjustarRequest, ctx: PlanContext = { uid: "local" }): Promise<Plano> {
+    return this.run(ajustarMessage(req), req.semanaAtual, ctx, "ajustar");
   }
 
-  private async run(userText: string, firstWeek: number): Promise<Plano> {
+  private async run(userText: string, firstWeek: number, ctx: PlanContext, kind: "gerar" | "ajustar"): Promise<Plano> {
     try {
-      this.budget?.reserve();
+      await this.budget?.check(ctx.uid);
     } catch (err) {
       if (err instanceof BudgetExceeded) throw new PlannerError(`${err.message} O app usa o plano por regras até lá.`, 429);
       throw err;
     }
+    const started = Date.now();
+    const base = { uid: ctx.uid, email: ctx.email, kind, model: MODEL };
+    const log = async (usage: Parameters<typeof costUsd>[1] | undefined, model: string, ok: boolean, error?: string) => {
+      if (!this.usage) return;
+      const cost = usage ? costUsd(model, usage) : 0;
+      try {
+        await this.usage.record(eventFrom({ ...base, model }, usage, cost, ok, Date.now() - started, error));
+      } catch (e) {
+        console.error("Falha ao registrar uso:", e);
+      }
+      console.log(`[uso] ${kind} ${ok ? "ok" : "erro"} US$ ${cost.toFixed(4)} ${Date.now() - started} ms`);
+    };
+
     let message;
     try {
       // Streaming: planos longos (maratona) podem passar de alguns minutos.
@@ -54,19 +75,28 @@ export class Planner {
       });
       message = await stream.finalMessage();
     } catch (err) {
-      throw toPlannerError(err);
+      const e = toPlannerError(err);
+      await log(undefined, MODEL, false, e.message);
+      throw e;
     }
     // Contabiliza o custo real, inclusive de respostas recusadas ou truncadas.
-    if (message.usage) this.budget?.record(message.model ?? MODEL, message.usage);
+    const model = message.model ?? MODEL;
 
     if (message.stop_reason === "refusal") {
-      throw new PlannerError("A IA não conseguiu gerar este plano. Tente novamente ou use o plano por regras.", 422);
+      const msg = "A IA não conseguiu gerar este plano. Tente novamente ou use o plano por regras.";
+      await log(message.usage, model, false, "recusa");
+      throw new PlannerError(msg, 422);
     }
     if (message.stop_reason === "max_tokens") {
+      await log(message.usage, model, false, "resposta truncada");
       throw new PlannerError("O plano ficou longo demais. Tente um prazo menor.", 422);
     }
     const parsed = message.parsed_output;
-    if (!parsed) throw new PlannerError("Resposta da IA em formato inesperado.", 502);
+    if (!parsed) {
+      await log(message.usage, model, false, "formato inesperado");
+      throw new PlannerError("Resposta da IA em formato inesperado.", 502);
+    }
+    await log(message.usage, model, true);
     return sanitizePlan(parsed, firstWeek);
   }
 }

@@ -1,0 +1,11 @@
+{
+  "FIREBASE_API_KEY": "",
+  "FIREBASE_APP_ID": "",
+  "FIREBASE_PROJECT_ID": "",
+  "FIREBASE_SENDER_ID": "",
+  "FIREBASE_STORAGE_BUCKET": "",
+  "GOOGLE_WEB_CLIENT_ID": "",
+  "PLAN_API_URL": "https://fast-run-plano.onrender.com",
+  "PRIVACY_URL": "https://fast-run-plano.onrender.com/privacidade",
+  "DELETE_ACCOUNT_URL": "https://fast-run-plano.onrender.com/excluir-conta"
+}
