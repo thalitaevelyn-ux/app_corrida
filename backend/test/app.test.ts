@@ -132,3 +132,14 @@ describe("HTTP", () => {
     assert.equal(json.semanas[0].numero, 5);
   });
 });
+
+describe("privacidade", () => {
+  it("serve a política sem exigir token", async () => {
+    const app = createApp({ planner: new Planner(fakeClient({})), appToken: "segredo" });
+    const res = await app.request("/privacidade");
+    assert.equal(res.status, 200);
+    const html = await res.text();
+    assert.match(html, /Política de privacidade do Fast run/);
+    assert.match(html, /Localização e rotas nunca saem do aparelho/);
+  });
+});

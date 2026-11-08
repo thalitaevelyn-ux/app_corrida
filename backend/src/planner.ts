@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 
+import { Budget, BudgetExceeded } from "./budget.js";
 import { ajustarMessage, gerarMessage, SYSTEM_PROMPT } from "./prompts.js";
 import { type AjustarRequest, type GerarRequest, type Plano, PlanoSchema, sanitizePlan } from "./schema.js";
 
@@ -17,7 +18,10 @@ export class PlannerError extends Error {
 }
 
 export class Planner {
-  constructor(private readonly client: Anthropic = new Anthropic()) {}
+  constructor(
+    private readonly client: Anthropic = new Anthropic(),
+    private readonly budget?: Budget,
+  ) {}
 
   gerar(req: GerarRequest): Promise<Plano> {
     return this.run(gerarMessage(req), 1);
@@ -28,6 +32,12 @@ export class Planner {
   }
 
   private async run(userText: string, firstWeek: number): Promise<Plano> {
+    try {
+      this.budget?.reserve();
+    } catch (err) {
+      if (err instanceof BudgetExceeded) throw new PlannerError(`${err.message} O app usa o plano por regras até lá.`, 429);
+      throw err;
+    }
     let message;
     try {
       // Streaming: planos longos (maratona) podem passar de alguns minutos.
@@ -46,6 +56,8 @@ export class Planner {
     } catch (err) {
       throw toPlannerError(err);
     }
+    // Contabiliza o custo real, inclusive de respostas recusadas ou truncadas.
+    if (message.usage) this.budget?.record(message.model ?? MODEL, message.usage);
 
     if (message.stop_reason === "refusal") {
       throw new PlannerError("A IA não conseguiu gerar este plano. Tente novamente ou use o plano por regras.", 422);

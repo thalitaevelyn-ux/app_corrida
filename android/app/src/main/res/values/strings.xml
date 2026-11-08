@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Troque pela URL real do seu serviço no Render, se o nome for diferente. -->
+    <string name="privacy_policy_url" translatable="false">https://fast-run-plano.onrender.com/privacidade</string>
+</resources>

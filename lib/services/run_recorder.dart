@@ -150,7 +150,7 @@ class RunRecorder extends ChangeNotifier {
       intervalDuration: const Duration(seconds: 2),
       foregroundNotificationConfig: const ForegroundNotificationConfig(
         notificationTitle: 'Gravando corrida',
-        notificationText: 'O App Corrida está registrando sua rota.',
+        notificationText: 'O Fast run está registrando sua rota.',
         notificationChannelName: 'Gravação de corrida',
         enableWakeLock: true,
         setOngoing: true,

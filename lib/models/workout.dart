@@ -68,7 +68,7 @@ class Workout {
   final DateTime start;
   final DateTime end;
 
-  /// App de origem (ex.: "Samsung Health", "Strava", "App Corrida").
+  /// App de origem (ex.: "Samsung Health", "Strava", "Fast run").
   final String source;
   final double? distanceM;
   final int? kcal;

@@ -1,4 +1,4 @@
-# App Corrida
+# Fast run
 
 App Android em Flutter para corredores, de iniciantes a quem quer melhorar o tempo. Ele lê seus treinos do
 **Health Connect**, monta um **plano personalizado** para o seu objetivo, ajusta o plano **toda semana** conforme
@@ -57,7 +57,7 @@ flutter test
 
 ## Rodar o backend
 
-Veja [backend/README.md](backend/README.md).
+Veja [backend/README.md](backend/README.md). Deploy no Render (plano free) pelo `render.yaml`: passo a passo em [docs/PUBLICAR.md](docs/PUBLICAR.md).
 
 ## Estrutura
 
@@ -77,5 +77,5 @@ backend/       servidor TypeScript (Hono + SDK da Anthropic)
 - Rotas de outros apps (Strava, Garmin) só aparecem se você liberar "Rotas de exercício → Sempre permitir" no
   Health Connect. Parciais por km só existem nas corridas gravadas por este app.
 - A rota é desenhada sem mapa de fundo (evita depender de chave de API de mapas).
-- Antes de publicar na Play Store: troque o `applicationId` `com.exemplo.app_corrida`, configure a assinatura de release
-  e preencha a declaração de uso de dados de saúde exigida pelo Google para o Health Connect.
+- Pacote: `com.thalitaevelyn.fast_run`. Para publicar (Render, chave da API, assinatura, Play Store), siga
+  [docs/PUBLICAR.md](docs/PUBLICAR.md): os passos que custam dinheiro estão marcados.

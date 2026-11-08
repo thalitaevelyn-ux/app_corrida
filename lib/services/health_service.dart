@@ -203,7 +203,7 @@ class HealthService {
       'com.xiaomi.wearable': 'Mi Fitness',
       'com.huawei.health': 'Huawei Health',
       'com.fitbit.FitbitMobile': 'Fitbit',
-      'com.exemplo.app_corrida': 'App Corrida',
+      'com.thalitaevelyn.fast_run': 'Fast run',
     };
     return known[id] ?? known[name] ?? (name.isNotEmpty ? name : 'Health Connect');
   }

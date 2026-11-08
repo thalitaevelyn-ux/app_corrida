@@ -1,4 +1,4 @@
-package com.exemplo.app_corrida
+package com.thalitaevelyn.fast_run
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

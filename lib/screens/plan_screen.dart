@@ -166,6 +166,11 @@ class _PlanScreenState extends State<PlanScreen> {
           icon: s.generating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.refresh),
           label: const Text('Gerar plano de novo'),
         ),
+        TextButton.icon(
+          onPressed: () => showDialog<void>(context: context, builder: (_) => _AboutDialog(state: s)),
+          icon: const Icon(Icons.privacy_tip_outlined),
+          label: const Text('Sobre e privacidade'),
+        ),
       ],
     );
   }
@@ -193,6 +198,66 @@ class _StatusTag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
       child: Text(label, style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w600)),
+    );
+  }
+}
+
+
+/// URL da política de privacidade (a mesma de android/.../strings.xml).
+const privacyPolicyUrl = String.fromEnvironment('PRIVACY_URL', defaultValue: 'https://fast-run-plano.onrender.com/privacidade');
+
+class _AboutDialog extends StatelessWidget {
+  const _AboutDialog({required this.state});
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return AlertDialog(
+      title: const Text('Sobre e privacidade'),
+      content: SingleChildScrollView(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          const Text(
+            'Seus treinos são lidos do Health Connect e ficam só neste aparelho. '
+            'Com a IA ativa, apenas um resumo (objetivo, idade, peso e médias dos treinos) é enviado para gerar o plano. '
+            'Localização e rotas nunca saem do aparelho.',
+          ),
+          const SizedBox(height: 12),
+          Text('Política completa:', style: t.labelLarge),
+          const SelectableText(privacyPolicyUrl),
+          const SizedBox(height: 12),
+          Text(
+            'O Fast run não é um dispositivo médico. Consulte um médico antes de começar a treinar.',
+            style: t.bodySmall,
+          ),
+        ]),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () async {
+            final ok = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Apagar meus dados?'),
+                content: const Text(
+                  'Apaga objetivo, plano e detalhes das corridas guardados no app. '
+                  'Os treinos no Health Connect não são apagados (gerencie-os pelo próprio Health Connect).',
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                  FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Apagar')),
+                ],
+              ),
+            );
+            if (ok == true) {
+              if (context.mounted) Navigator.of(context).pop();
+              await state.resetAll();
+            }
+          },
+          child: const Text('Apagar meus dados'),
+        ),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Fechar')),
+      ],
     );
   }
 }

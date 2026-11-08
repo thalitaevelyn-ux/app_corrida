@@ -3,7 +3,9 @@ import { timingSafeEqual } from "node:crypto";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 
+import type { Budget } from "./budget.js";
 import { Planner, PlannerError } from "./planner.js";
+import { privacyHtml } from "./privacy.js";
 import { AjustarRequest, GerarRequest } from "./schema.js";
 
 export interface AppOptions {
@@ -12,13 +14,17 @@ export interface AppOptions {
   appToken: string;
   /** Limite de planos por token/IP por hora, para conter custo. */
   maxPerHour?: number;
+  /** Para mostrar o gasto do mês em /v1/uso (protegido pelo token). */
+  budget?: Budget;
 }
 
-export function createApp({ planner, appToken, maxPerHour = 20 }: AppOptions) {
+export function createApp({ planner, appToken, maxPerHour = 20, budget }: AppOptions) {
   const app = new Hono();
   const hits = new Map<string, number[]>();
 
   app.get("/health", (c) => c.json({ ok: true }));
+  // Pública: a Play Store e o Health Connect abrem esta página.
+  app.get("/privacidade", (c) => c.html(privacyHtml()));
 
   app.use("/v1/*", bodyLimit({ maxSize: 200 * 1024, onError: (c) => c.json({ erro: "Requisição grande demais." }, 413) }));
 
@@ -38,6 +44,8 @@ export function createApp({ planner, appToken, maxPerHour = 20 }: AppOptions) {
     hits.set(key, recent);
     await next();
   });
+
+  app.get("/v1/uso", (c) => c.json(budget?.status() ?? { erro: "Sem teto configurado." }));
 
   app.post("/v1/plano/gerar", async (c) => {
     const body = GerarRequest.safeParse(await c.req.json().catch(() => null));

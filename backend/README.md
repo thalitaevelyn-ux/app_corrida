@@ -6,6 +6,8 @@ validado. Ele existe para a chave da API **não** ficar dentro do app.
 - `POST /v1/plano/gerar`: gera o plano completo
 - `POST /v1/plano/ajustar`: ajusta as semanas restantes com base na semana que terminou
 - `GET /health`: verificação de vida
+- `GET /privacidade`: política de privacidade (pública, exigida pela Play Store e pelo Health Connect)
+- `GET /v1/uso`: gasto estimado do mês e planos de hoje (exige o token)
 
 Detalhes:
 
@@ -17,7 +19,10 @@ Detalhes:
   automaticamente.
 - **Cache de prompt:** o prompt de sistema é fixo e marcado para cache.
 - **Proteção:** token compartilhado (`APP_TOKEN`), limite de 200 KB por requisição e limite de planos por hora
-  (`MAX_PER_HOUR`).
+  (`MAX_PER_HOUR`) e por dia (`MAX_PER_DAY`).
+- **Teto de gastos:** `MONTHLY_BUDGET_USD` (padrão US$ 5). O servidor soma o custo real de cada resposta e para de
+  chamar a IA ao atingir o teto; o app passa a usar o plano por regras. O contador fica em memória e zera quando o
+  serviço reinicia, então configure também o limite de gastos no Console da Anthropic, que é o limite rígido.
 
 ## Rodar localmente
 
@@ -51,14 +56,8 @@ npm test
 
 ## Publicar
 
-O `Dockerfile` roda em qualquer serviço de contêiner (Google Cloud Run, Render, Fly.io, Railway). Configure
-`ANTHROPIC_API_KEY` e `APP_TOKEN` como variáveis secretas do serviço. Exemplo no Cloud Run:
-
-```bash
-gcloud run deploy app-corrida-plano --source . --region southamerica-east1 --allow-unauthenticated --set-secrets ANTHROPIC_API_KEY=anthropic-key:latest,APP_TOKEN=app-token:latest
-```
-
-`--allow-unauthenticated` só libera o acesso HTTP. O servidor continua exigindo o `APP_TOKEN`.
+Use o Render, no plano free, com o `render.yaml` da raiz do repositório. O passo a passo está em
+[../docs/PUBLICAR.md](../docs/PUBLICAR.md). O `Dockerfile` também roda em outros serviços de contêiner.
 
 ## Custo e segurança
 

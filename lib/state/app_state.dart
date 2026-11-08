@@ -248,7 +248,7 @@ class AppState extends ChangeNotifier {
           title: 'Corrida',
           start: start,
           end: end,
-          source: 'App Corrida',
+          source: 'Fast run',
           distanceM: distanceM,
           kcal: kcal,
           splits: splits,

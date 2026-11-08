@@ -1,0 +1,6 @@
+# Copie para android/key.properties (que NÃO vai para o git) e preencha.
+# Gere a chave com o comando em docs/PUBLICAR.md.
+storeFile=/caminho/para/fast-run-upload.jks
+storePassword=
+keyAlias=upload
+keyPassword=

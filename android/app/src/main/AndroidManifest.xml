@@ -24,7 +24,7 @@
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY"/>
 
     <application
-        android:label="App Corrida"
+        android:label="Fast run"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -44,7 +44,12 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Tela de justificativa das permissões do Health Connect -->
+        </activity>
+        <!-- Health Connect (Android 13 e anterior): mostra a política de privacidade -->
+        <activity
+            android:name=".PermissionsRationaleActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
@@ -53,7 +58,7 @@
         <activity-alias
             android:name="ViewPermissionUsageActivity"
             android:exported="true"
-            android:targetActivity=".MainActivity"
+            android:targetActivity=".PermissionsRationaleActivity"
             android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />

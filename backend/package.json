@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Gera e ajusta planos de corrida com a Claude API para o App Corrida.",
+  "description": "Gera e ajusta planos de corrida com a Claude API para o Fast run.",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
