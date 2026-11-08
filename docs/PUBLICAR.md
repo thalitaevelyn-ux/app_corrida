@@ -47,10 +47,10 @@ real é o limite do passo 2, no Console da Anthropic. Configure os dois.
 3. Preencha as variáveis que o Render pedir:
    - `ANTHROPIC_API_KEY`: a chave do passo 1.
    - `PRIVACY_CONTACT_EMAIL`: o e-mail que vai aparecer na política de privacidade.
-   - O `APP_TOKEN` é gerado automaticamente.
+   - `APP_TOKEN`: um valor longo e aleatório (por exemplo, a saída de `openssl rand -hex 24`). Ele precisa ser
+     igual ao `PLAN_API_TOKEN` usado no build do app.
 4. Clique em **Apply**. O primeiro deploy leva alguns minutos.
-5. Abra o serviço e copie a URL (algo como `https://fast-run-plano.onrender.com`). Em **Environment**, copie o valor
-   de `APP_TOKEN`.
+5. Abra o serviço e copie a URL (algo como `https://fast-run-plano.onrender.com`).
 6. Teste no navegador:
    - `https://SUA-URL/health` deve mostrar `{"ok":true}`.
    - `https://SUA-URL/privacidade` deve mostrar a política de privacidade.
